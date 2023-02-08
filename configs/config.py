@@ -14,5 +14,8 @@ CFG = {
     },
     "model": {
 
+    },
+    "augmentation": {
+        
     }
 }
