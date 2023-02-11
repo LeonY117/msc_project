@@ -16,7 +16,8 @@ class ImageDisplayer():
             self.labels = self.labels.unsqueeze(0)
 
         img = self.images[idx].permute(1, 2, 0)
-        labels = self.labels[idx].permute(1, 2, 0)
+        # labels = self.labels[idx].permute(1, 2, 0)
+        labels = self.labels[idx].squeeze()
 
         plt.figure(figsize=(8, 4))
 
