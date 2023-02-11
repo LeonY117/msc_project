@@ -92,12 +92,13 @@ class Crop(object):
 class Resize(object):
     def __init__(self, size):
         self.size = size
-        self.resize = transforms.Resize(size, transforms.InterpolationMode.NEAREST) #nearest-exact?
+        self.resize_image = transforms.Resize(size, transforms.InterpolationMode.BILINEAR) 
+        self.resize_mask = transforms.Resize(size, transforms.InterpolationMode.NEAREST) #nearest-exact?
 
     def __call__(self, data):
         image, mask = data['image'], data['mask']
-        image = self.resize(image)
-        mask = self.resize(mask)
+        image = self.resize_image(image)
+        mask = self.resize_mask(mask)
 
         return {'image': image, 'mask': mask}
 
