@@ -112,8 +112,23 @@ class ToTensor(object):
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C x H x W
-        image = image.transpose((2, 0, 1))
-        image = torch.from_numpy(image).to(dtype=torch.float32) / 255.0 # normalize
-        mask = torch.from_numpy(mask).unsqueeze(0).to(dtype=torch.float32)
+        # image = image.transpose((2, 0, 1))
+        # image = torch.from_numpy(image).to(dtype=torch.float32) / 255.0 # normalize
+        # mask = torch.from_numpy(mask).unsqueeze(0).to(dtype=torch.float32)
+
+        image = image / 255.0
         mask = torch.where(mask == 4, torch.ones_like(mask)*3, mask)
+        
+        return {'image': image, 'mask': mask}
+
+class ToDevice(object):
+    """move data to cpu / gpu"""
+    def __init__(self, device):
+        self.device = device
+    def __call__(self, data):
+        image, mask = data['image'], data['mask']
+
+        image.to(self.device)
+        mask.to(self.device)
+
         return {'image': image, 'mask': mask}
