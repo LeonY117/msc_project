@@ -1,3 +1,4 @@
 .tmp.drivedownload
 .tmp.driveupload
 */__pycache__
+/dataset/annotations_v2_redone/
