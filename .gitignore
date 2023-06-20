@@ -1,4 +1,6 @@
 .tmp.drivedownload
 .tmp.driveupload
 */__pycache__
+**/.DS_Store
 /dataset/annotations_v2_redone/
+/dataset/mods/
