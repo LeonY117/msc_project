@@ -1,12 +1,12 @@
 PATHS:
   # Results output folder
-  RESULTS: '../../../Documents/mods_wasr'
+  RESULTS: '../../../ShorelineNet_offline/results/results'
   # Path to where the dataset is stored
-  DATASET: '../../../Documents/mods_dataset'
+  DATASET: '../../../ShorelineNet_offline/mods'
   # Path to where calibration files are stored
-  DATASET_CALIB: '../../../Documents/mods_dataset/calibration'
+  DATASET_CALIB: '../../../ShorelineNet_offline/mods/calibration'
   # Path to where the segmentation predictions are stored
-  SEGMENTATIONS: '../../../Documents/mods_wasr'
+  SEGMENTATIONS: '../../../ShorelineNet_offline/results/results'
 
 SEGMENTATIONS:
   # Prediciton dir structure:

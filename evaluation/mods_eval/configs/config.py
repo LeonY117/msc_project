@@ -12,15 +12,15 @@ _C.DATASET.DNG_ZONE_RANGE = 15    # Danger zone range (in meters)
 
 # All Paths
 _C.PATHS = CN()
-_C.PATHS.RESULTS       = "./results"                # Path to where the results will be saved
-_C.PATHS.DATASET       = "/data/mods"               # Path to where the dataset is stored
-_C.PATHS.DATASET_CALIB = "/data/mods/calibration/"  # Path to where calibration files are stored
-_C.PATHS.SEGMENTATIONS = "/data/mods/predictions/"  # Path to where the segmentation predictions are stored
+_C.PATHS.RESULTS       = "../../../ShorelineNet_offline/results/"                # Path to where the results will be saved
+_C.PATHS.DATASET       = "../../../ShorelineNet_offline/mods"               # Path to where the dataset is stored
+_C.PATHS.DATASET_CALIB = "../../../ShorelineNet_offline/mods/calibration/"  # Path to where calibration files are stored
+_C.PATHS.SEGMENTATIONS = "../../../ShorelineNet_offline/results/"  # Path to where the segmentation predictions are stored
 
 # Segmentation Colors
 _C.SEGMENTATIONS = CN()
 
-_C.SEGMENTATIONS.SEQ_FIRST = True  # Sequence first or method first structure of the segmentation folder
+_C.SEGMENTATIONS.SEQ_FIRST = False  # Sequence first or method first structure of the segmentation folder
 
 _C.SEGMENTATIONS.INPUT_COLORS = [[  0,   0,   0],  # Obstacles RGB color code
                                  [255,   0,   0],  # Water RGB color code
