@@ -4,7 +4,7 @@ from yacs.config import CfgNode as CN
 _C = CN()
 
 _C.DATASET = CN()
-_C.DATASET.NUM_SEQUENCES  = 94    # Number of sequences in the dataset
+_C.DATASET.NUM_SEQUENCES  = 94    # Number of sequences in the dataset # 94
 _C.DATASET.IMG_WIDTH      = 1278  # Width of images in the dataset
 _C.DATASET.IMG_HEIGHT     = 958   # Height of images in the dataset
 _C.DATASET.CAMERA_HEIGHT  = 1.0   # Height of the camera above the water surface (in meters)

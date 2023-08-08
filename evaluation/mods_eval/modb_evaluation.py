@@ -37,6 +37,9 @@ def get_arguments():
 
     return parser.parse_args()
 
+# to change the config-file:
+# python eval.py --config-file configs/config.py --sequences 0 --workers 4 test_results
+
 
 class SequenceEvaluator:
     def __init__(self, gt, gt_coverage, cfg, method_name, sequences, mapping_dict_seq):
