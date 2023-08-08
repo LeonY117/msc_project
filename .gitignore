@@ -1,6 +1,7 @@
 .tmp.drivedownload
 .tmp.driveupload
 */__pycache__
+*.pyc
 **/.DS_Store
 /dataset
 /results
