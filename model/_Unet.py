@@ -56,7 +56,7 @@ class _Unet(Bayesian_net):
         decoder: OrderedDict = self._build_decoder()
         self.encoder = nn.Sequential(encoder)
         self.decoder = nn.Sequential(decoder)
-        self.logsoftmax = nn.LogSoftmax(dim=1)
+        # self.logsoftmax = nn.LogSoftmax(dim=1)
 
         # ========= weight initialization ========
         self._init_weights()
@@ -92,7 +92,7 @@ class _Unet(Bayesian_net):
                 x = torch.cat([x, features.pop()], dim=1)
         # last deconv
         x = self.decoder.lastDeconv(x)
-        x = self.logsoftmax(x)
+        # x = self.logsoftmax(x)
 
         return x
 
@@ -188,8 +188,8 @@ class _Unet(Bayesian_net):
             kernel_size=3,
             stride=2,
             padding=1,
-            norm_layer=self.norm_layer,
-            activation_layer=self.activation_layer,
+            norm_layer=None,
+            activation_layer=None,
         )
         return decoder
 
