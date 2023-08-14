@@ -26,6 +26,7 @@ class _Unet(Bayesian_net):
         activation_layer: Optional[Callable[..., nn.Module]] = nn.SiLU,
         dropout_layer: Optional[Callable[..., nn.Module]] = nn.Dropout2d,
         last_channel: Optional[int] = None,
+        **kwargs: Any,
     ) -> None:
         super().__init__()
 
@@ -43,9 +44,13 @@ class _Unet(Bayesian_net):
             if last_channel is not None
             else self.inv_res_setting[-1].out_channels * 4
         )
+        self.shallowDeconv = kwargs.pop("shallowDeconv", False)
+        self.last_dropout_p = kwargs.pop("last_dropout_p", False)
         # self.last_channel = last_channel
 
         self.decoder_config = self._decoder_config()
+        if self.shallowDeconv:
+            self._set_decoder_shallow()
         self.dropout_state = True
         self.stochastic_depth_state = True
 
@@ -111,6 +116,11 @@ class _Unet(Bayesian_net):
 
         return decoder_cfg[::-1]
 
+    def _set_decoder_shallow(self):
+        # set n for decoder to be all 1
+        for cfg in self.decoder_config:
+            cfg.num_layers = 1
+
     def _build_decoder(self) -> OrderedDict:
         decoder: OrderedDict[str, nn.Module] = OrderedDict()
 
@@ -133,7 +143,7 @@ class _Unet(Bayesian_net):
             return int(dim % 2 == 0)
 
         # build inverted residual blocks
-        total_stage_blocks = sum(cfg.num_layers for cfg in self.inv_res_setting)
+        total_stage_blocks = sum(cfg.num_layers for cfg in self.decoder_config)
         stage_block_id = 0
         for i, cfg in enumerate(self.decoder_config):
             stage: List[nn.Module] = []
@@ -154,15 +164,17 @@ class _Unet(Bayesian_net):
                     )
 
                 # adjust stochastic depth probability
-                sd_prob = self.stochastic_depth_prob * (
-                    1 - float(stage_block_id) / total_stage_blocks
-                )
+                sd_prob = 0
 
                 # overwrite cfg if not first conv in the stage
                 if j != 0:
                     block_cfg.input_channels = block_cfg.out_channels
                     block_cfg.stride = 1
-                    sd_prob = 0
+
+                if block_cfg.stride == 1:
+                    sd_prob = self.stochastic_depth_prob * (
+                        1 - float(stage_block_id) / total_stage_blocks
+                    )
 
                 stage.append(
                     block_cfg.block(
@@ -181,15 +193,19 @@ class _Unet(Bayesian_net):
 
             decoder[f"stage{i+1}"] = nn.Sequential(*stage)
 
+        last_layer_dropout = self.dropout_layer(self.last_dropout_p)
         # build last deconv
-        decoder["lastDeconv"] = Deconv2dNormActivation(
-            self.decoder_config[-1].out_channels,
-            self.num_classes,
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            norm_layer=None,
-            activation_layer=None,
+        decoder["lastDeconv"] = nn.Sequential(
+            Deconv2dNormActivation(
+                self.decoder_config[-1].out_channels,
+                self.num_classes,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                norm_layer=None,
+                activation_layer=None,
+            ),
+            last_layer_dropout,
         )
         return decoder
 
