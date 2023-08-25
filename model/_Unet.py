@@ -17,11 +17,13 @@ from .Bayesian_net import Bayesian_net
 class _Unet(Bayesian_net):
     def __init__(
         self,
-        inverted_residual_setting: Sequence[MBConvConfig],
+        encoder_cfg: Sequence[MBConvConfig],
+        decoder_cfg: Sequence[MBConvConfig],
         input_dim: Union[int, Tuple[int, int]],
         stochastic_depth_prob: float = 0.2,
         num_classes: int = 1000,
         use_se: Optional[bool] = True,
+        skip_mode: Optional[str] = "concat",  # concat or add
         norm_layer: Optional[Callable[..., nn.Module]] = nn.BatchNorm2d,
         activation_layer: Optional[Callable[..., nn.Module]] = nn.SiLU,
         dropout_layer: Optional[Callable[..., nn.Module]] = nn.Dropout2d,
@@ -30,7 +32,7 @@ class _Unet(Bayesian_net):
     ) -> None:
         super().__init__()
 
-        self.inv_res_setting = inverted_residual_setting
+        self.inv_res_setting = encoder_cfg
         self.stochastic_depth_prob = stochastic_depth_prob
         self.num_classes = num_classes
 
@@ -38,19 +40,22 @@ class _Unet(Bayesian_net):
         self.norm_layer = norm_layer
         self.activation_layer = activation_layer
         self.dropout_layer = dropout_layer
+
+        self.skip_mode = skip_mode if skip_mode is not None else "concat"
         self.input_dim = input_dim
         self.last_channel = (
             last_channel
             if last_channel is not None
             else self.inv_res_setting[-1].out_channels * 4
         )
-        self.shallowDeconv = kwargs.pop("shallowDeconv", False)
+        # self.shallowDeconv = kwargs.pop("shallowDeconv", False)
         self.last_dropout_p = kwargs.pop("last_dropout_p", False)
         # self.last_channel = last_channel
 
-        self.decoder_config = self._decoder_config()
-        if self.shallowDeconv:
-            self._set_decoder_shallow()
+        self.decoder_config = decoder_cfg
+        # self.decoder_config = self._decoder_config(skip_mode=skip_mode)
+        # if self.shallowDeconv:
+        #     self._set_decoder_shallow()
         self.dropout_state = True
         self.stochastic_depth_state = True
 
@@ -94,32 +99,73 @@ class _Unet(Bayesian_net):
         for i, cfg in enumerate(self.decoder_config):
             x = self.decoder[i + 1](x)
             if i < len(self.decoder_config) - 1 and self.decoder_config[i + 1].use_skip:
-                x = torch.cat([x, features.pop()], dim=1)
+                if self.skip_mode == "concat":
+                    x = torch.cat([x, features.pop()], dim=1)
+                elif self.skip_mode == "add":
+                    x = x + features.pop()
         # last deconv
         x = self.decoder.lastDeconv(x)
-        # x = self.logsoftmax(x)
 
         return x
 
-    def _decoder_config(self) -> List[MBConvConfig]:
-        decoder_cfg: List[MBConvConfig] = []
-        oup = self.inv_res_setting[0].input_channels
-        skip = 0
-        for cfg in self.inv_res_setting:
-            skip = cfg.out_channels if cfg.use_skip else 0
-            cfg_copy = copy.copy(cfg)
-            cfg_copy.input_channels = cfg.out_channels + skip
-            cfg_copy.out_channels = oup
-            decoder_cfg.append(cfg_copy)
+    # def _forward_impl(self, x: Tensor) -> Tensor:
+    #     features = []
+    #     # ================= Encoder =================
+    #     # first conv
+    #     x = self.encoder.conv0(x)
+    #     print(f"First Conv: {x.shape}")
+    #     # stages
+    #     for i, cfg in enumerate(self.inv_res_setting):
+    #         x = self.encoder[i + 1](x)
+    #         print(f"Stage {i}: {x.shape}")
+    #         if cfg.use_skip:
+    #             features.append(x)
+    #             print(f"Features: {len(features)}")
+    #     # last conv
+    #     x = self.encoder.lastConv(x)
+    #     print(f"Last Conv: {x.shape}")
 
-            oup = cfg.out_channels
+    #     # ================= Decoder =================
+    #     # first deconv
+    #     x = self.decoder.deconv0(x)
+    #     print(f"First Deconv: {x.shape}")
+    #     # stages
+    #     for i, cfg in enumerate(self.decoder_config):
+    #         x = self.decoder[i + 1](x)
+    #         print(f"Stage {i}: {x.shape}")
+    #         if i < len(self.decoder_config) - 1 and self.decoder_config[i + 1].use_skip:
+    #             print(f"use skip: {x.shape}, {features[-1].shape}")
+    #             if self.skip_mode == 'concat':
+    #                 x = torch.cat([x, features.pop()], dim=1)
+    #             elif self.skip_mode == 'add':
+    #                 x = x + features.pop()
+    #     # last deconv
+    #     x = self.decoder.lastDeconv(x)
+    #     print(f"Last Deconv: {x.shape}")
 
-        return decoder_cfg[::-1]
+    #     return x
 
-    def _set_decoder_shallow(self):
-        # set n for decoder to be all 1
-        for cfg in self.decoder_config:
-            cfg.num_layers = 1
+    # def _decoder_config(self, skip_mode:str) -> List[MBConvConfig]:
+    #     decoder_cfg: List[MBConvConfig] = []
+    #     oup = self.inv_res_setting[0].input_channels
+    #     skip = 0
+    #     for cfg in self.inv_res_setting:
+    #         skip = cfg.out_channels if cfg.use_skip else 0
+    #         cfg_copy = copy.copy(cfg)
+    #         cfg_copy.input_channels = cfg.out_channels
+    #         if skip_mode == "concat":
+    #             cfg_copy.input_channels += skip
+    #         cfg_copy.out_channels = oup
+    #         decoder_cfg.append(cfg_copy)
+
+    #         oup = cfg.out_channels
+
+    #     return decoder_cfg[::-1]
+
+    # def _set_decoder_shallow(self):
+    #     # set n for decoder to be all 1
+    #     for cfg in self.decoder_config:
+    #         cfg.num_layers = 1
 
     def _build_decoder(self) -> OrderedDict:
         decoder: OrderedDict[str, nn.Module] = OrderedDict()
@@ -142,6 +188,24 @@ class _Unet(Bayesian_net):
                     dim = math.ceil(dim / 2)
             return int(dim % 2 == 0)
 
+        def adjust_deconv_expand_ratio(block_cfg) -> None:
+            # adjust expand ratio
+            expand_channels = block_cfg.out_channels * block_cfg.expand_ratio
+            expand_ratio = expand_channels / block_cfg.input_channels
+            block_cfg.expand_ratio = expand_ratio
+
+        def get_deconv_layer(i, input_dim) -> nn.Module:
+            if isinstance(input_dim, tuple):
+                dim1, dim2 = input_dim
+                oup_pad = compute_out_pad(i, dim1), compute_out_pad(i, dim2)
+            else:
+                oup_pad = compute_out_pad(i, input_dim)
+            conv_layer = partial(
+                Deconv2dNormActivation,
+                out_pad=oup_pad,
+            )
+            return conv_layer
+        
         # build inverted residual blocks
         total_stage_blocks = sum(cfg.num_layers for cfg in self.decoder_config)
         stage_block_id = 0
@@ -149,20 +213,14 @@ class _Unet(Bayesian_net):
             stage: List[nn.Module] = []
             for j in range(cfg.num_layers):
                 # copy to avoid modifications. shallow copy is enough
-                block_cfg = copy.copy(cfg)
+                block_cfg = copy.deepcopy(cfg)
 
                 conv_layer = Conv2dNormActivation
-                if block_cfg.stride != 1 and j == 0:
-                    if isinstance(self.input_dim, tuple):
-                        dim1, dim2 = self.input_dim
-                        oup_pad = compute_out_pad(i, dim1), compute_out_pad(i, dim2)
-                    else:
-                        oup_pad = compute_out_pad(i, self.input_dim)
-                    conv_layer = partial(
-                        Deconv2dNormActivation,
-                        out_pad=oup_pad,
-                    )
-
+                if j == 0:
+                    adjust_deconv_expand_ratio(block_cfg)
+                    if block_cfg.stride != 1:
+                        conv_layer = get_deconv_layer(i, self.input_dim)
+                
                 # adjust stochastic depth probability
                 sd_prob = 0
 
