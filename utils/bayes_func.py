@@ -24,7 +24,7 @@ def bayes_forward(
 
     Returns
     -----------
-    y_logits            : torch.tensor (c x W x H)
+    y_softmax            : torch.tensor (c x W x H)
     y_pred               : torch.tensor (W x H)
     y_pred_std_per_class : torch.tensor (c x W x H)
     y_pred_std_avg       : torch.tensor (W x H)
@@ -39,18 +39,20 @@ def bayes_forward(
     with torch.no_grad():
         net.eval()
         net.set_bayes_mode(True, mode)
-        y_pred_raw = net(buffer)
+        y_logits = net(buffer) # (k x c x W x H)
 
     # Average the softmax (note that the resultant vectors are not normalised)
-    y_logits = y_pred_raw.mean(dim=0)  # (c x W x H)
+    # y_logits = y_pred_raw.mean(dim=0)  # (k x c x W x H)
+    y_softmax = y_logits.softmax(dim=1)  # (k x c x W x H)
+    y_softmax_avg = y_softmax.mean(dim=0)  # (c x W x H)
     # Take max prob as prediction
-    y_pred = torch.argmax(y_logits, dim=0).to(torch.int)  # (W x H)
+    y_pred = torch.argmax(y_softmax_avg, dim=0).to(torch.int)  # (W x H)
     # Per class uncertainty
-    y_pred_std_per_class = y_pred_raw.var(dim=0)  # (c x W x H)
+    y_pred_std_per_class = y_softmax.var(dim=0)  # (c x W x H)
     # Average uncertainty over classes
     y_pred_std_avg = y_pred_std_per_class.mean(dim=0)  # (W x H)
 
-    return y_logits, y_pred, y_pred_std_per_class, y_pred_std_avg
+    return y_softmax_avg, y_pred, y_pred_std_per_class, y_pred_std_avg
 
 
 def bayes_eval(
