@@ -44,7 +44,7 @@ where $w_t$ represents an instance of a realised weight tensor, and $p(y=c|x, \m
 ### Network architecture variations
 
 A set of network variations were tried better understand the encoder-decoder architecture.
-![qualitative](qualitative_skips/sd.png)
+![qualitative](assets/qualitative_skips.png)
 
 - _no-skip_: remove skip connections between the encoder and decoder
 - _upsample-skip_: add skip connection everytime the network upsamples
