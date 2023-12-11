@@ -1,5 +1,6 @@
 .tmp.drivedownload
 .tmp.driveupload
+local_notebooks/
 */__pycache__
 *.pyc
 **/.DS_Store
